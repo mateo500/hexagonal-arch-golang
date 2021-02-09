@@ -82,3 +82,8 @@ func (r *redisRepository) FindById(id string) (*person.Person, error) {
 
 	return newPerson, nil
 }
+
+func (r *redisRepository) GetAll() ([]*person.Person, error) {
+
+	return nil, errors.Wrap(errors.New("method not supported with redis repository"), "repository.Person.GetAll")
+}

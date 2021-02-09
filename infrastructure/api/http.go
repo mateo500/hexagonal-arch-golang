@@ -14,6 +14,7 @@ import (
 type PersonHandler interface {
 	GetById(http.ResponseWriter, *http.Request)
 	Create(http.ResponseWriter, *http.Request)
+	GetAll(http.ResponseWriter, *http.Request)
 }
 
 type Handler struct {
@@ -59,6 +60,25 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setupResponse(w, contentType, responseBody, http.StatusOK)
+
+}
+
+func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+
+	personsCollection, err := h.personService.GetAll()
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	responseBody, err := h.serializer(contentType).EncodeMultiple(personsCollection)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	setupResponse(w, contentType, responseBody, http.StatusCreated)
 
 }
 

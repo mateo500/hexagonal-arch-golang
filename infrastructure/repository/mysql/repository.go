@@ -76,3 +76,38 @@ func (m *mysqlRepository) FindById(id string) (*person.Person, error) {
 	return newPerson, nil
 
 }
+
+func (m *mysqlRepository) GetAll() ([]*person.Person, error) {
+
+	recordsCollection := make([]*person.Person, 0)
+
+	sql := "SELECT * FROM persons"
+
+	records, err := m.mysqlClient.Query(sql)
+	if err != nil {
+		return nil, errors.Wrap(err, "repository.Person.GetAll")
+	}
+
+	for records.Next() {
+		var age int
+		var id, name, last_name string
+
+		personFound := new(person.Person)
+
+		err := records.Scan(&id, &name, &last_name, &age)
+		if err != nil {
+			return nil, errors.Wrap(err, "repository.Person.GetAll")
+		}
+
+		personFound.ID = id
+		personFound.Name = name
+		personFound.LastName = last_name
+		personFound.Age = age
+
+		recordsCollection = append(recordsCollection, personFound)
+
+	}
+
+	return recordsCollection, nil
+
+}

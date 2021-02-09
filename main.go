@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	repository := getRepository() // repository <- service -> handler
+	repository := getRepository() // repository <- (domain -> service) -> handler & serializer -> Transporter(http, grpc, soap, websockets etc.)
 	service := person.NewPersonService(repository)
 	handler := api.NewHandler(service)
 
@@ -28,6 +28,7 @@ func main() {
 	router.Use(middleware.Recoverer)
 
 	router.Get("/{id}", handler.GetById)
+	router.Get("/", handler.GetAll)
 	router.Post("/", handler.Create)
 
 	errs := make(chan error, 2)

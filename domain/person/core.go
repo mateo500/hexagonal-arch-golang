@@ -6,8 +6,11 @@ import (
 	"github.com/teris-io/shortid"
 )
 
+const ColombianAdultAge int = 18
+const NameMinLength int = 3
+const LastNameMinLength int = 1
+
 var ErrPersonNotFound = errors.New("Person not found")
-var ColombianAdultAge int = 18
 
 type personService struct {
 	personRepo PersonRepository
@@ -26,4 +29,8 @@ func (p *personService) Create(person *Person) error {
 
 func (p *personService) FindById(id string) (*Person, error) {
 	return p.personRepo.FindById(id)
+}
+
+func (p *personService) GetAll() ([]*Person, error) {
+	return p.personRepo.GetAll()
 }

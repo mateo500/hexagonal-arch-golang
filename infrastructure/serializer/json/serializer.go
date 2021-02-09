@@ -28,3 +28,13 @@ func (p *Person) Encode(input *person.Person) ([]byte, error) {
 
 	return rawMsg, nil
 }
+
+func (p *Person) EncodeMultiple(input []*person.Person) ([]byte, error) {
+	rawMsg, err := json.Marshal(input)
+
+	if err != nil {
+		return nil, errors.Wrap(err, "serializer.Person.Encode")
+	}
+
+	return rawMsg, nil
+}
