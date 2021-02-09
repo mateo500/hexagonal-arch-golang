@@ -58,7 +58,7 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setupResponse(w, contentType, responseBody, http.StatusCreated)
+	setupResponse(w, contentType, responseBody, http.StatusOK)
 
 }
 

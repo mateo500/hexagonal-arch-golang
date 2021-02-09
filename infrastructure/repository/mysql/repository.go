@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 	"persons.com/api/domain/person"
 )
@@ -12,28 +13,12 @@ type mysqlRepository struct {
 	mysqlClient *sql.DB
 }
 
-func (m *mysqlRepository) NewMysqlClient(dbUser string, dbPass string, dbName string) (*sql.DB, error) {
+func NewMysqlClient(dbUser string, dbPass string, dbName string) (*sql.DB, error) {
 
 	database, err := sql.Open("mysql", dbUser+":"+dbPass+"@/"+dbName)
 	if err != nil {
 		return nil, errors.Wrap(err, "repository.NewMysqlClient")
 	}
-
-	sql := `DROP TABLE IF EXISTS persons;
-	CREATE TABLE persons (
-		id int(15) NOT NULL,
-	  	name varchar(30) NOT NULL,
-	  	last_name varchar(30) NOT NULL,
-		age int(3) NOT NULL,  
-	  	PRIMARY KEY (id)
-	);`
-
-	statement, err := database.Prepare(sql)
-	if err != nil {
-		return nil, errors.Wrap(err, "repository.Person.Create")
-	}
-
-	statement.Exec()
 
 	return database, nil
 }
@@ -47,7 +32,7 @@ func NewMysqlRepository(db *sql.DB) person.PersonRepository {
 func (m *mysqlRepository) Create(person *person.Person) error {
 	sql := `
 		INSERT INTO persons (id, name, last_name, age)
-		VALUES ($1, $2, $3, $4)
+		VALUES (?, ?, ?, ?)
 	`
 
 	statement, err := m.mysqlClient.Prepare(sql)
@@ -62,10 +47,35 @@ func (m *mysqlRepository) Create(person *person.Person) error {
 
 	log.Println(result)
 
-	defer m.mysqlClient.Close()
 	return nil
 }
 
 func (m *mysqlRepository) FindById(id string) (*person.Person, error) {
+
+	newPerson := &person.Person{}
+
+	sql := "SELECT * FROM persons WHERE id = ?"
+
+	result, err := m.mysqlClient.Query(sql, id)
+	if err != nil {
+		return nil, errors.Wrap(err, "repository.Person.FindById")
+	}
+
+	for result.Next() {
+		var age int
+		var id, name, last_name string
+
+		err := result.Scan(&id, &name, &last_name, &age)
+		if err != nil {
+			return nil, errors.Wrap(err, "repository.Person.FindById")
+		}
+
+		newPerson.ID = id
+		newPerson.Age = age
+		newPerson.LastName = last_name
+		newPerson.Name = name
+	}
+
+	return newPerson, nil
 
 }

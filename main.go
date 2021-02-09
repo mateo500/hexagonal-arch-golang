@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"persons.com/api/domain/person"
 	"persons.com/api/infrastructure/api"
+	"persons.com/api/infrastructure/repository/mysql"
 	"persons.com/api/infrastructure/repository/redis"
 )
 
@@ -62,6 +63,18 @@ func getRepository() person.PersonRepository {
 			log.Fatal(err)
 		}
 		return repository
+
+	case "mysql":
+		dbUser := os.Getenv("DB_USER")
+		dbPass := os.Getenv("DB_PASSWORD")
+		dbName := os.Getenv("DB_NAME")
+
+		database, err := mysql.NewMysqlClient(dbUser, dbPass, dbName)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return mysql.NewMysqlRepository(database)
 	}
 
 	return nil
