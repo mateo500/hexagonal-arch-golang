@@ -12,16 +12,6 @@ type mysqlRepository struct {
 	mysqlClient *sql.DB
 }
 
-func NewMysqlClient(dbUser string, dbPass string, dbName string) (*sql.DB, error) {
-
-	database, err := sql.Open("mysql", dbUser+":"+dbPass+"@/"+dbName)
-	if err != nil {
-		return nil, errors.Wrap(err, "repository.NewMysqlClient")
-	}
-
-	return database, nil
-}
-
 func NewMysqlRepository(db *sql.DB) person.PersonRepository {
 	return &mysqlRepository{
 		mysqlClient: db,
@@ -51,7 +41,7 @@ func (m *mysqlRepository) FindById(id string) (*person.Person, error) {
 
 	newPerson := &person.Person{}
 
-	sql := "SELECT * FROM persons WHERE id = ?"
+	sql := "SELECT id, name, last_name, age FROM persons WHERE id = ?"
 
 	result, err := m.mysqlClient.Query(sql, id)
 	if err != nil {
@@ -85,7 +75,7 @@ func (m *mysqlRepository) GetAll() ([]*person.Person, error) {
 
 	recordsCollection := make([]*person.Person, 0)
 
-	sql := "SELECT * FROM persons"
+	sql := "SELECT id, name, last_name, age FROM persons"
 
 	records, err := m.mysqlClient.Query(sql)
 	if err != nil {

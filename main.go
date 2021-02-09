@@ -6,21 +6,22 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"persons.com/api/domain/person"
-	"persons.com/api/infrastructure/api"
-	"persons.com/api/infrastructure/repository/mysql"
-	"persons.com/api/infrastructure/repository/redis"
+	api "persons.com/api/infrastructure/api/http"
+	"persons.com/api/infrastructure/repositories/mongodb"
+	"persons.com/api/infrastructure/repositories/mysql"
 )
 
 func main() {
-	repository := getRepository() // Domain -> Service -> Repository -> Handlers & Serializers(json, messagePack, grpc, soap, etc) -> Transporter(http, websockets, GraphQl etc.)
+	repository := getRepository()
 	service := person.NewPersonService(repository)
 	handler := api.NewHandler(service)
-
+	//app flow: Domain -> Service -> Repository -> Serializers(json, messagePack, grpc, soap, etc) -> Handlers(controllers) -> Transporter(http, websockets, GraphQl etc.)
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
@@ -57,14 +58,6 @@ func httpPort() string {
 
 func getRepository() person.PersonRepository {
 	switch os.Getenv("DB_TYPE") {
-	case "redis":
-		redisUrl := os.Getenv("DB_URL")
-		repository, err := redis.NewRedisRepository(redisUrl)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return repository
-
 	case "mysql":
 		dbUser := os.Getenv("DB_USER")
 		dbPass := os.Getenv("DB_PASSWORD")
@@ -76,6 +69,22 @@ func getRepository() person.PersonRepository {
 		}
 
 		return mysql.NewMysqlRepository(database)
+
+	case "mongodb":
+		dbUrl := os.Getenv("DB_URL")
+		dbName := os.Getenv("MONGO_DB")
+		mongoTimeout, err := strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		repository, err := mongodb.NewMongoRepository(dbUrl, dbName, mongoTimeout)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		return repository
+
 	}
 
 	return nil

@@ -4,12 +4,25 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
 	"persons.com/api/domain/person"
-	jsonSerializer "persons.com/api/infrastructure/serializer/json"
+	"persons.com/api/infrastructure/cache"
+	"persons.com/api/infrastructure/cache/redis"
+	serializer "persons.com/api/infrastructure/serializers"
+	jsonSerializer "persons.com/api/infrastructure/serializers/json"
 )
+
+var personsCache = func() cache.PersonsCache {
+	redisClient, err := redis.GetRedisClient(os.Getenv("CACHE_DB_URL"), 20)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return redisClient
+}()
 
 type PersonHandler interface {
 	GetById(http.ResponseWriter, *http.Request)
@@ -34,30 +47,34 @@ func setupResponse(w http.ResponseWriter, contentType string, body []byte, statu
 	}
 }
 
-func (h *Handler) serializer(contentType string) person.PersonSerializer {
+func (h *Handler) serializer(contentType string) serializer.PersonSerializer {
 	return &jsonSerializer.Person{}
 }
 
 func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	id := chi.URLParam(r, "id")
-	personFound, err := h.personService.FindById(id)
 
-	if err != nil {
-		if errors.Cause(err) == person.ErrPersonNotFound {
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-			return
+	var personFound *person.Person
+
+	personInCache, err := personsCache.Get(id)
+
+	if personInCache == nil {
+		personFoundInDb, err := h.personService.FindById(id)
+		if err != nil {
+			if errors.Cause(err) == person.ErrPersonNotFound {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			InternalServerError(err, w)
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		personFound = personFoundInDb
+	} else {
+		personFound = personInCache
 	}
 
 	responseBody, err := h.serializer(contentType).Encode(personFound)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	InternalServerError(err, w)
 
 	setupResponse(w, contentType, responseBody, http.StatusOK)
 
@@ -67,16 +84,10 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
 	personsCollection, err := h.personService.GetAll()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	InternalServerError(err, w)
 
 	responseBody, err := h.serializer(contentType).EncodeMultiple(personsCollection)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	InternalServerError(err, w)
 
 	setupResponse(w, contentType, responseBody, http.StatusCreated)
 
@@ -86,28 +97,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
 	requestBody, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	InternalServerError(err, w)
 
 	newPerson, err := h.serializer(contentType).Decode(requestBody)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	InternalServerError(err, w)
 
 	err = h.personService.Create(newPerson)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	InternalServerError(err, w)
+
+	err = personsCache.Set(newPerson.ID, newPerson)
+	InternalServerError(err, w)
 
 	responseBody, err := h.serializer(contentType).Encode(newPerson)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	InternalServerError(err, w)
 
 	setupResponse(w, contentType, responseBody, http.StatusCreated)
 }
