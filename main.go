@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	repository := getRepository() // repository <- (domain -> service) -> handler & serializer(json, messagePack, grpc, soap, etc) -> Transporter(http, websockets, GraphQl etc.)
+	repository := getRepository() // Domain -> Service -> Repository -> Handlers & Serializers(json, messagePack, grpc, soap, etc) -> Transporter(http, websockets, GraphQl etc.)
 	service := person.NewPersonService(repository)
 	handler := api.NewHandler(service)
 

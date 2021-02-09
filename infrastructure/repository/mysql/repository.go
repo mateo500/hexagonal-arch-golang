@@ -73,6 +73,10 @@ func (m *mysqlRepository) FindById(id string) (*person.Person, error) {
 		newPerson.Name = name
 	}
 
+	if len(newPerson.Name) == 0 && len(newPerson.LastName) == 0 && newPerson.Age == 0 {
+		return nil, errors.Wrap(person.ErrPersonNotFound, "repository.Person.FindById")
+	}
+
 	return newPerson, nil
 
 }
