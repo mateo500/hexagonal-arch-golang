@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"database/sql"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
@@ -40,12 +39,10 @@ func (m *mysqlRepository) Create(person *person.Person) error {
 		return errors.Wrap(err, "repository.Person.Create")
 	}
 
-	result, err := statement.Exec(person.ID, person.Name, person.LastName, person.Age)
+	_, err = statement.Exec(person.ID, person.Name, person.LastName, person.Age)
 	if err != nil {
 		return errors.Wrap(err, "repository.Person.Create")
 	}
-
-	log.Println(result)
 
 	return nil
 }
