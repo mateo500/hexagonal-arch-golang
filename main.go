@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	repository := getRepository()
+	repository := getRepository() // repository <- service -> handler
 	service := person.NewPersonService(repository)
 	handler := api.NewHandler(service)
 
