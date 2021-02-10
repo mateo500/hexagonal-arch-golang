@@ -1,4 +1,4 @@
-package api
+package http
 
 import (
 	"io/ioutil"
@@ -11,12 +11,14 @@ import (
 	"persons.com/api/domain/person"
 	"persons.com/api/infrastructure/cache"
 	"persons.com/api/infrastructure/cache/redis"
-	serializer "persons.com/api/infrastructure/serializers"
+	"persons.com/api/infrastructure/serializers"
 	jsonSerializer "persons.com/api/infrastructure/serializers/json"
+	messagepack "persons.com/api/infrastructure/serializers/messagePack"
+	"persons.com/api/infrastructure/validators"
 )
 
 var personsCache = func() cache.PersonsCache {
-	redisClient, err := redis.GetRedisClient(os.Getenv("CACHE_DB_URL"), 20)
+	redisClient, err := redis.GetRedisClient(os.Getenv("CACHE_DB_URL"), 60)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,11 +45,16 @@ func setupResponse(w http.ResponseWriter, contentType string, body []byte, statu
 	w.WriteHeader(statusCode)
 	_, err := w.Write(body)
 	if err != nil {
-		log.Println(err)
+		log.Printf("error seting up http response: %v", err)
 	}
 }
 
-func (h *Handler) serializer(contentType string) serializer.PersonSerializer {
+func (h *Handler) serializer(contentType string) serializers.PersonSerializer {
+
+	if contentType == "application/x-msgpack" {
+		return &messagepack.Person{}
+	}
+
 	return &jsonSerializer.Person{}
 }
 
@@ -101,6 +108,9 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	newPerson, err := h.serializer(contentType).Decode(requestBody)
 	InternalServerError(err, w)
+
+	err = validators.PersonValidator(newPerson)
+	BadRequest(err, w)
 
 	err = h.personService.Create(newPerson)
 	InternalServerError(err, w)

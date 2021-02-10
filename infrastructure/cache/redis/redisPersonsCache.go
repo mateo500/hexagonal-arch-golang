@@ -15,9 +15,9 @@ type redisCache struct {
 	client  *redis.Client
 }
 
-func (c *redisCache) Set(key string, value *person.Person) error {
+func (c *redisCache) Set(key string, person *person.Person) error {
 
-	json, err := json.Marshal(value)
+	json, err := json.Marshal(person)
 	if err != nil {
 		return errors.Wrap(err, "cache.Person.Set")
 	}

@@ -12,7 +12,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"persons.com/api/domain/person"
-	api "persons.com/api/infrastructure/api/http"
+	httpApi "persons.com/api/infrastructure/api/http"
 	"persons.com/api/infrastructure/repositories/mongodb"
 	"persons.com/api/infrastructure/repositories/mysql"
 )
@@ -20,7 +20,7 @@ import (
 func main() {
 	repository := getRepository()
 	service := person.NewPersonService(repository)
-	handler := api.NewHandler(service)
+	handler := httpApi.NewHandler(service)
 	//app flow: Domain -> Service -> Repository -> Serializers(json, messagePack, grpc, soap, etc) -> Handlers(controllers) -> Transporter(http, websockets, GraphQl etc.)
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
