@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"persons.com/api/domain/person"
 )
 
@@ -43,7 +44,7 @@ func (m *mongoRepository) FindById(id string) (*person.Person, error) {
 
 	filter := bson.M{"ID": id}
 
-	err := collection.FindOne(ctx, filter).Decode(&personFound)
+	err := collection.FindOne(ctx, filter, options.FindOne().SetProjection(bson.M{"_id": 0})).Decode(&personFound)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, errors.Wrap(person.ErrPersonNotFound, "repository.Person.FindById")
@@ -86,7 +87,7 @@ func (m *mongoRepository) GetAll() ([]*person.Person, error) {
 
 	collection := m.client.Database(m.database).Collection("persons")
 
-	cursor, err := collection.Find(ctx, bson.M{})
+	cursor, err := collection.Find(ctx, bson.M{}, options.Find().SetProjection(bson.M{"_id": 0}))
 	if err != nil {
 		return nil, errors.Wrap(err, "repository.Person.Create")
 	}
