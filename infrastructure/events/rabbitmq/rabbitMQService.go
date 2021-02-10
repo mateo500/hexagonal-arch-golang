@@ -14,7 +14,7 @@ type RabbitMqService struct {
 	client *amqp.Connection
 }
 
-func NewRabbitMqService(host string, Qname string) (events.EventService, error) {
+func NewRabbitMqService(host string, Qname string) (events.PersonEventService, error) {
 
 	connection, err := amqp.Dial(host)
 	if err != nil {
@@ -33,7 +33,7 @@ func NewRabbitMqService(host string, Qname string) (events.EventService, error) 
 
 	defer ch.Close()
 
-	log.Printf("Queue created: %v", q)
+	log.Printf("Queue created: {%v} => | messages: %v | consumers: %v", q.Name, q.Messages, q.Consumers)
 
 	return &RabbitMqService{
 		host:   host,

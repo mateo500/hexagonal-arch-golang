@@ -13,9 +13,12 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"persons.com/api/domain/person"
 	httpApi "persons.com/api/infrastructure/api/http"
+	"persons.com/api/infrastructure/env"
 	"persons.com/api/infrastructure/repositories/mongodb"
 	"persons.com/api/infrastructure/repositories/mysql"
 )
+
+var envMap map[string]string = env.NewEnvService().GetEnvs("dev")
 
 func main() {
 	repository := getRepository()
@@ -50,18 +53,19 @@ func main() {
 
 func httpPort() string {
 	port := "5000"
-	if os.Getenv("PORT") != "" {
-		port = os.Getenv("PORT")
+	if envMap["APP_PORT"] != "" {
+		port = envMap["APP_PORT"]
 	}
 	return fmt.Sprintf(":%s", port)
 }
 
 func getRepository() person.PersonRepository {
+
 	switch os.Getenv("DB_TYPE") {
 	case "mysql":
-		dbUser := os.Getenv("DB_USER")
-		dbPass := os.Getenv("DB_PASSWORD")
-		dbName := os.Getenv("DB_NAME")
+		dbUser := envMap["DB_USER"]
+		dbPass := envMap["DB_PASSWORD"]
+		dbName := envMap["DB_NAME"]
 
 		database, err := mysql.NewMysqlClient(dbUser, dbPass, dbName)
 		if err != nil {
@@ -71,14 +75,14 @@ func getRepository() person.PersonRepository {
 		return mysql.NewMysqlRepository(database)
 
 	case "mongodb":
-		dbUrl := os.Getenv("DB_URL")
-		dbName := os.Getenv("MONGO_DB")
-		mongoTimeout, err := strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
+		dbURL := envMap["DB_URL"]
+		dbName := envMap["MONGO_DB"]
+		mongoTimeout, err := strconv.Atoi(envMap["MONGO_TIMEOUT"])
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		repository, err := mongodb.NewMongoRepository(dbUrl, dbName, mongoTimeout)
+		repository, err := mongodb.NewMongoRepository(dbURL, dbName, mongoTimeout)
 		if err != nil {
 			log.Fatal(err)
 		}

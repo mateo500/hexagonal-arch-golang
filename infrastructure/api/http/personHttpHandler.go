@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	httpUtils "persons.com/api/infrastructure/api/http/utils"
 	"persons.com/api/infrastructure/cache"
 	"persons.com/api/infrastructure/cache/redis"
+	"persons.com/api/infrastructure/env"
 	"persons.com/api/infrastructure/events"
 	"persons.com/api/infrastructure/events/rabbitmq"
 	"persons.com/api/infrastructure/serializers"
@@ -21,6 +21,8 @@ import (
 	messagepackSerializer "persons.com/api/infrastructure/serializers/messagePack"
 	"persons.com/api/infrastructure/validators"
 )
+
+var envMap map[string]string = env.NewEnvService().GetEnvs(os.Getenv("APP_MODE"))
 
 type PersonHandler interface {
 	GetById(http.ResponseWriter, *http.Request)
@@ -31,17 +33,17 @@ type PersonHandler interface {
 type Handler struct {
 	Service  person.PersonService
 	Cache    cache.PersonsCache
-	EventBus events.EventService
+	EventBus events.PersonEventService
 }
 
 func NewHandler(personService person.PersonService) PersonHandler {
 
-	redisClient, err := redis.GetRedisClient(os.Getenv("CACHE_DB_URL"), 60)
+	redisClient, err := redis.GetRedisClient(envMap["CACHE_DB_URL"], 60)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	rabbitEventsService, err := rabbitmq.NewRabbitMqService(os.Getenv("Q_URL"), os.Getenv("Q_NAME"))
+	rabbitEventsService, err := rabbitmq.NewRabbitMqService(envMap["Q_URL"], envMap["Q_NAME"])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,24 +73,28 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 	personInCache, err := h.Cache.Get(id)
 
 	if personInCache == nil {
+
 		personFoundInDb, err := h.Service.FindById(id)
+
 		if err != nil {
 			if errors.Cause(err) == person.ErrPersonNotFound {
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}
-			InternalServerError(err, w)
+			internalServerError(err, w)
 		}
+
 		personFound = personFoundInDb
 
 		err = h.Cache.Set(personFoundInDb.ID, personFoundInDb)
-		InternalServerError(err, w)
+		internalServerError(err, w)
+
 	} else {
 		personFound = personInCache
 	}
 
 	responseBody, err := h.serializer(contentType).Encode(personFound)
-	InternalServerError(err, w)
+	internalServerError(err, w)
 
 	httpUtils.SetupResponse(w, contentType, responseBody, http.StatusOK)
 
@@ -103,18 +109,17 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	if personsInCache == nil {
 		personsCollection, err := h.Service.GetAll()
-		InternalServerError(err, w)
+		internalServerError(err, w)
 
 		personsFound = personsCollection
 		err = h.Cache.SetAll("personsCache@"+time.Now().Format("2-24-2021"), personsCollection)
-		InternalServerError(err, w)
+		internalServerError(err, w)
 	} else {
 		personsFound = personsInCache
-		fmt.Println("from redis")
 	}
 
 	responseBody, err := h.serializer(contentType).EncodeMultiple(personsFound)
-	InternalServerError(err, w)
+	internalServerError(err, w)
 
 	httpUtils.SetupResponse(w, contentType, responseBody, http.StatusOK)
 
@@ -126,19 +131,19 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	exchangeType := ""
 
 	requestBody, err := ioutil.ReadAll(r.Body)
-	InternalServerError(err, w)
+	internalServerError(err, w)
 
 	newPerson, err := h.serializer(contentType).Decode(requestBody)
-	InternalServerError(err, w)
+	internalServerError(err, w)
 
 	err = validators.PersonValidator(newPerson)
-	BadRequest(err, w)
+	badRequest(err, w)
 
 	err = h.Service.Create(newPerson)
-	InternalServerError(err, w)
+	internalServerError(err, w)
 
 	err = h.Cache.Set(newPerson.ID, newPerson)
-	InternalServerError(err, w)
+	internalServerError(err, w)
 
 	if newPerson.Age >= person.ColombianAdultAge {
 		exchangeType = "adults"
@@ -146,11 +151,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		exchangeType = "minors"
 	}
 
-	err = h.EventBus.Publish(exchangeType, os.Getenv("Q_NAME"), newPerson)
-	InternalServerError(err, w)
+	err = h.EventBus.Publish(exchangeType, envMap["Q_NAME"], newPerson)
+	internalServerError(err, w)
 
 	responseBody, err := h.serializer(contentType).Encode(newPerson)
-	InternalServerError(err, w)
+	internalServerError(err, w)
 
 	httpUtils.SetupResponse(w, contentType, responseBody, http.StatusCreated)
 }
