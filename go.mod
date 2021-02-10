@@ -11,6 +11,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/streadway/amqp v1.0.0 // indirect
 	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
-	github.com/vmihailenco/msgpack/v5 v5.2.0 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.2.0
 	go.mongodb.org/mongo-driver v1.4.6
 )

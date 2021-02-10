@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
@@ -13,7 +14,7 @@ import (
 	"persons.com/api/infrastructure/cache/redis"
 	"persons.com/api/infrastructure/serializers"
 	jsonSerializer "persons.com/api/infrastructure/serializers/json"
-	messagepack "persons.com/api/infrastructure/serializers/messagePack"
+	messagepackSerializer "persons.com/api/infrastructure/serializers/messagePack"
 	"persons.com/api/infrastructure/validators"
 )
 
@@ -52,7 +53,7 @@ func setupResponse(w http.ResponseWriter, contentType string, body []byte, statu
 func (h *Handler) serializer(contentType string) serializers.PersonSerializer {
 
 	if contentType == "application/x-msgpack" {
-		return &messagepack.Person{}
+		return &messagepackSerializer.Person{}
 	}
 
 	return &jsonSerializer.Person{}
@@ -76,6 +77,9 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 			InternalServerError(err, w)
 		}
 		personFound = personFoundInDb
+
+		err = personsCache.Set(personFoundInDb.ID, personFoundInDb)
+		InternalServerError(err, w)
 	} else {
 		personFound = personInCache
 	}
@@ -90,13 +94,28 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 
-	personsCollection, err := h.personService.GetAll()
+	var personsFound []*person.Person
+
+	personsInCache, err := personsCache.GetAll("personsCache@" + time.Now().Format("2-24-2021"))
+	if err == nil {
+		InternalServerError(err, w)
+	}
+
+	if personsInCache == nil {
+		personsCollection, err := h.personService.GetAll()
+		InternalServerError(err, w)
+
+		personsFound = personsCollection
+		err = personsCache.SetAll("personsCache@"+time.Now().Format("2-24-2021"), personsCollection)
+		InternalServerError(err, w)
+	} else {
+		personsFound = personsInCache
+	}
+
+	responseBody, err := h.serializer(contentType).EncodeMultiple(personsFound)
 	InternalServerError(err, w)
 
-	responseBody, err := h.serializer(contentType).EncodeMultiple(personsCollection)
-	InternalServerError(err, w)
-
-	setupResponse(w, contentType, responseBody, http.StatusCreated)
+	setupResponse(w, contentType, responseBody, http.StatusOK)
 
 }
 
