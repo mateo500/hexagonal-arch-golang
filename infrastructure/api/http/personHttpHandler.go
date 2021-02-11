@@ -23,9 +23,9 @@ type Handler struct {
 	personUseCases usecases.PersonUseCases
 }
 
-func NewHandler(personService person.PersonService, personEventsService person.PersonEventsService, personsCache usecases.PersonsCacheService) PersonHandler {
+func NewHandler(personService person.PersonService, personEventsService person.PersonEventsService, personsCacheService usecases.PersonsCacheService) PersonHandler {
 
-	usecases := usecases.NewPersonUseCases(personService, personEventsService, personsCache, validators.PersonValidator)
+	usecases := usecases.NewPersonUseCases(personService, personEventsService, personsCacheService, validators.PersonValidator)
 
 	return &Handler{
 		personUseCases: usecases,
