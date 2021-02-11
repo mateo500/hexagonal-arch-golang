@@ -38,12 +38,12 @@ type Handler struct {
 
 func NewHandler(personService person.PersonService) PersonHandler {
 
-	redisClient, err := redis.GetRedisClient(envMap["CACHE_DB_URL"], 60)
+	redisClient, err := redis.GetRedisClient(envMap["CACHE_DB_URL"], 30)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	rabbitEventsService, err := rabbitmq.NewRabbitMqService(envMap["Q_URL"], envMap["Q_NAME"])
+	rabbitEventsService, err := rabbitmq.NewRabbitMqService(envMap["Q_URL"], []string{"persons"}, []string{"minors", "adults"})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		exchangeType = "minors"
 	}
 
-	err = h.EventBus.Publish(exchangeType, envMap["Q_NAME"], newPerson)
+	err = h.EventBus.Publish(exchangeType, "persons", newPerson)
 	internalServerError(err, w)
 
 	responseBody, err := h.serializer(contentType).Encode(newPerson)

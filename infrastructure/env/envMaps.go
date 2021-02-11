@@ -12,7 +12,6 @@ var devMap map[string]string = map[string]string{
 	"MONGO_TIMEOUT": os.Getenv("MONGO_TIMEOUT"),
 	"CACHE_DB_URL":  os.Getenv("CACHE_DB_URL"),
 	"APP_PORT":      os.Getenv("APP_PORT"),
-	"Q_NAME":        os.Getenv("Q_NAME"),
 	"Q_URL":         os.Getenv("Q_URL"),
 }
 
@@ -26,6 +25,5 @@ var prodMap map[string]string = map[string]string{
 	"MONGO_TIMEOUT": os.Getenv("MONGO_TIMEOUT"),
 	"CACHE_DB_URL":  os.Getenv("CACHE_DB_URL"),
 	"APP_PORT":      os.Getenv("APP_PORT"),
-	"Q_NAME":        os.Getenv("Q_NAME"),
 	"Q_URL":         os.Getenv("Q_URL"),
 }

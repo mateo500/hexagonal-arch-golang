@@ -10,11 +10,10 @@ import (
 )
 
 type RabbitMqService struct {
-	host   string
 	client *amqp.Connection
 }
 
-func NewRabbitMqService(host string, Qname string) (events.PersonEventService, error) {
+func NewRabbitMqService(host string, Qnames []string, exchanges []string) (events.PersonEventService, error) {
 
 	connection, err := amqp.Dial(host)
 	if err != nil {
@@ -26,22 +25,30 @@ func NewRabbitMqService(host string, Qname string) (events.PersonEventService, e
 		return nil, errors.Wrap(err, "events.rabbitmq.NewRabbitMqService")
 	}
 
-	q, err := ch.QueueDeclare(Qname, false, false, false, false, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "events.rabbitmq.CreateQueue")
+	for _, qname := range Qnames {
+		q, err := ch.QueueDeclare(qname, false, false, false, false, nil)
+		log.Printf("Queue created: {%v} => | messages: %v | consumers: %v", q.Name, q.Messages, q.Consumers)
+		if err != nil {
+			return nil, errors.Wrap(err, "events.rabbitmq.NewRabbitMqService")
+		}
+	}
+
+	for _, exchange := range exchanges {
+		err = ch.ExchangeDeclare(exchange, "direct", true, false, false, false, nil)
+		log.Printf("Exchange created: %v", exchange)
+		if err != nil {
+			return nil, errors.Wrap(err, "events.rabbitmq.NewRabbitMqService")
+		}
 	}
 
 	defer ch.Close()
 
-	log.Printf("Queue created: {%v} => | messages: %v | consumers: %v", q.Name, q.Messages, q.Consumers)
-
 	return &RabbitMqService{
-		host:   host,
 		client: connection,
 	}, nil
 }
 
-func (r *RabbitMqService) Publish(exchange string, busName string, value interface{}) error {
+func (r *RabbitMqService) Publish(exchange string, Qname string, value interface{}) error {
 
 	json, err := json.Marshal(value)
 	if err != nil {
@@ -53,7 +60,7 @@ func (r *RabbitMqService) Publish(exchange string, busName string, value interfa
 		return errors.Wrap(err, "events.rabbitmq.NewRabbitMqService")
 	}
 
-	err = ch.Publish(exchange, busName, false, false, amqp.Publishing{
+	err = ch.Publish(exchange, Qname, false, false, amqp.Publishing{
 		ContentType: "application/json",
 		Body:        json,
 	})

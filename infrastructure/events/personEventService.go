@@ -1,5 +1,5 @@
 package events
 
 type PersonEventService interface {
-	Publish(target string, busName string, value interface{}) error
+	Publish(exchange string, Qname string, value interface{}) error
 }
