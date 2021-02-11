@@ -5,9 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"strconv"
-	"syscall"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -18,7 +16,7 @@ import (
 	"persons.com/api/infrastructure/repositories/mysql"
 )
 
-var envMap map[string]string = env.NewEnvService().GetEnvs("dev")
+var envMap map[string]string = env.NewEnvService().GetEnvs(os.Getenv("APP_MODE"))
 
 func main() {
 	repository := getRepository()
@@ -42,13 +40,7 @@ func main() {
 
 	}()
 
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGINT)
-		errs <- fmt.Errorf("%s", <-c)
-	}()
-
-	fmt.Printf("Terminated %s", <-errs)
+	<-errs
 }
 
 func httpPort() string {

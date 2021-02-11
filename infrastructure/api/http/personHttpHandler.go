@@ -101,7 +101,6 @@ func (h *Handler) GetById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
-	contentType := r.Header.Get("Content-Type")
 
 	var personsFound []*person.Person
 
@@ -118,10 +117,10 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 		personsFound = personsInCache
 	}
 
-	responseBody, err := h.serializer(contentType).EncodeMultiple(personsFound)
+	responseBody, err := h.serializer("application/json").EncodeMultiple(personsFound)
 	internalServerError(err, w)
 
-	httpUtils.SetupResponse(w, contentType, responseBody, http.StatusOK)
+	httpUtils.SetupResponse(w, "application/json", responseBody, http.StatusOK)
 
 }
 
@@ -136,26 +135,32 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	newPerson, err := h.serializer(contentType).Decode(requestBody)
 	internalServerError(err, w)
 
-	err = validators.PersonValidator(newPerson)
-	badRequest(err, w)
+	if newPerson != nil {
+		err = validators.PersonValidator(newPerson)
+		badRequest(err, w)
 
-	err = h.Service.Create(newPerson)
-	internalServerError(err, w)
+		err = h.Service.Create(newPerson)
+		internalServerError(err, w)
 
-	err = h.Cache.Set(newPerson.ID, newPerson)
-	internalServerError(err, w)
+		err = h.Cache.Set(newPerson.ID, newPerson)
+		internalServerError(err, w)
 
-	if newPerson.Age >= person.ColombianAdultAge {
-		exchangeType = "adults"
+		if newPerson.Age >= person.ColombianAdultAge {
+			exchangeType = "adults"
+		} else {
+			exchangeType = "minors"
+		}
+
+		err = h.EventBus.Publish(exchangeType, "persons", newPerson)
+		internalServerError(err, w)
+
+		responseBody, err := h.serializer(contentType).Encode(newPerson)
+		internalServerError(err, w)
+
+		httpUtils.SetupResponse(w, contentType, responseBody, http.StatusCreated)
+
 	} else {
-		exchangeType = "minors"
+		internalServerError(errors.New("error deserializing payload"), w)
 	}
 
-	err = h.EventBus.Publish(exchangeType, "persons", newPerson)
-	internalServerError(err, w)
-
-	responseBody, err := h.serializer(contentType).Encode(newPerson)
-	internalServerError(err, w)
-
-	httpUtils.SetupResponse(w, contentType, responseBody, http.StatusCreated)
 }

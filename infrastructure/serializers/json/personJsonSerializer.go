@@ -12,7 +12,8 @@ type Person struct{}
 func (p *Person) Decode(input []byte) (*person.Person, error) {
 	person := &person.Person{}
 
-	if err := json.Unmarshal(input, person); err != nil {
+	err := json.Unmarshal(input, person)
+	if err != nil {
 		return nil, errors.Wrap(err, "serializer.Json.Person.Decode")
 	}
 
