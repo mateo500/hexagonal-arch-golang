@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"persons.com/api/server"
+	"persons.com/api/infrastructure/server"
 )
 
 func main() {
