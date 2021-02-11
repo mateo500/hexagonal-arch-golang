@@ -6,14 +6,14 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
-	"persons.com/api/infrastructure/events"
+	"persons.com/api/domain/person"
 )
 
 type RabbitMqService struct {
 	client *amqp.Connection
 }
 
-func NewRabbitMqService(host string, Qnames []string, exchanges []string) (events.PersonEventService, error) {
+func NewRabbitMqService(host string, Qnames []string, exchanges []string) (person.PersonEventsService, error) {
 
 	connection, err := amqp.Dial(host)
 	if err != nil {
@@ -48,9 +48,9 @@ func NewRabbitMqService(host string, Qnames []string, exchanges []string) (event
 	}, nil
 }
 
-func (r *RabbitMqService) Publish(exchange string, Qname string, value interface{}) error {
+func (r *RabbitMqService) CreateAdultPersonEvent(person *person.Person) error {
 
-	json, err := json.Marshal(value)
+	json, err := json.Marshal(person)
 	if err != nil {
 		return errors.Wrap(err, "events.rabbitmq.Publish")
 	}
@@ -60,7 +60,32 @@ func (r *RabbitMqService) Publish(exchange string, Qname string, value interface
 		return errors.Wrap(err, "events.rabbitmq.NewRabbitMqService")
 	}
 
-	err = ch.Publish(exchange, Qname, false, false, amqp.Publishing{
+	err = ch.Publish("adults", "persons", false, false, amqp.Publishing{
+		ContentType: "application/json",
+		Body:        json,
+	})
+	if err != nil {
+		return errors.Wrap(err, "events.rabbitmq.Publish")
+	}
+
+	defer ch.Close()
+
+	return nil
+}
+
+func (r *RabbitMqService) CreateMinorPersonEvent(person *person.Person) error {
+
+	json, err := json.Marshal(person)
+	if err != nil {
+		return errors.Wrap(err, "events.rabbitmq.Publish")
+	}
+
+	ch, err := r.client.Channel()
+	if err != nil {
+		return errors.Wrap(err, "events.rabbitmq.NewRabbitMqService")
+	}
+
+	err = ch.Publish("minors", "persons", false, false, amqp.Publishing{
 		ContentType: "application/json",
 		Body:        json,
 	})

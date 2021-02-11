@@ -10,8 +10,10 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"persons.com/api/domain/person"
-	httpApi "persons.com/api/infrastructure/api/http"
+	httpHandler "persons.com/api/infrastructure/api/http"
+	"persons.com/api/infrastructure/cache/redis"
 	"persons.com/api/infrastructure/env"
+	"persons.com/api/infrastructure/events/rabbitmq"
 	"persons.com/api/infrastructure/repositories/mongodb"
 	"persons.com/api/infrastructure/repositories/mysql"
 )
@@ -19,9 +21,20 @@ import (
 var envMap map[string]string = env.NewEnvService().GetEnvs(os.Getenv("APP_MODE"))
 
 func main() {
+
+	redisClient, err := redis.GetRedisClient(envMap["CACHE_DB_URL"], 30)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rabbitEventsService, err := rabbitmq.NewRabbitMqService(envMap["Q_URL"], []string{"persons"}, []string{"minors", "adults"})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	repository := getRepository()
 	service := person.NewPersonService(repository)
-	handler := httpApi.NewHandler(service)
+	handler := httpHandler.NewHandler(service, rabbitEventsService, redisClient)
 	//app flow: Domain -> Service -> Repository -> Serializers(json, messagePack, grpc, soap, etc) -> Handlers(controllers) -> Transporter(http, websockets, GraphQl etc.)
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)

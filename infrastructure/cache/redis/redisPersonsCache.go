@@ -6,8 +6,8 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
+	usecases "persons.com/api/application/use-cases/person"
 	"persons.com/api/domain/person"
-	"persons.com/api/infrastructure/cache"
 )
 
 type redisCache struct {
@@ -16,7 +16,7 @@ type redisCache struct {
 	client  *redis.Client
 }
 
-func NewRedisPersonsCache(host string, expirationTime time.Duration) (cache.PersonsCache, error) {
+func NewRedisPersonsCache(host string, expirationTime time.Duration) (usecases.PersonsCacheService, error) {
 
 	client, err := NewRedisClient(host)
 	if err != nil {
@@ -30,7 +30,7 @@ func NewRedisPersonsCache(host string, expirationTime time.Duration) (cache.Pers
 	}, nil
 }
 
-func GetRedisClient(host string, expirationTime time.Duration) (cache.PersonsCache, error) {
+func GetRedisClient(host string, expirationTime time.Duration) (usecases.PersonsCacheService, error) {
 	var redisCache, err = NewRedisPersonsCache(host, expirationTime)
 	if err != nil {
 		return nil, errors.Wrap(err, "cache.redisClient.GetRedisClient")
