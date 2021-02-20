@@ -3,7 +3,6 @@ package http
 import (
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
@@ -13,11 +12,8 @@ import (
 	"persons.com/api/infrastructure/api/serializers"
 	jsonSerializer "persons.com/api/infrastructure/api/serializers/json"
 	messagepackSerializer "persons.com/api/infrastructure/api/serializers/messagePack"
-	"persons.com/api/infrastructure/env"
 	"persons.com/api/infrastructure/validators"
 )
-
-var envMap map[string]string = env.NewEnvService().GetEnvs(os.Getenv("APP_MODE"))
 
 type Handler struct {
 	personUseCases usecases.PersonUseCases
@@ -84,12 +80,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	if newPerson != nil {
 		err := h.personUseCases.Create(newPerson)
-		internalServerError(err, w)
+		if err != nil {
+			internalServerError(err, w)
+		} else {
+			responseBody, err := h.serializer(contentType).Encode(newPerson)
+			internalServerError(err, w)
 
-		responseBody, err := h.serializer(contentType).Encode(newPerson)
-		internalServerError(err, w)
-
-		httpUtils.SetupResponse(w, contentType, responseBody, http.StatusCreated)
+			httpUtils.SetupResponse(w, contentType, responseBody, http.StatusCreated)
+		}
 
 	} else {
 		internalServerError(errors.New("error deserializing payload"), w)

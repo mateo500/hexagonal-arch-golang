@@ -18,3 +18,5 @@ func main() {
 
 	<-errs
 }
+
+//app flow: Domain -> Service -> useCases -> Repository -> Serializers(json, messagePack, grpc, soap, etc) -> Handlers(controllers) -> Transporter(http, websockets, GraphQl etc.)

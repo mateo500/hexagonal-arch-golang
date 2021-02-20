@@ -1,6 +1,8 @@
 package http
 
-import "net/http"
+import (
+	"net/http"
+)
 
 func internalServerError(err error, w http.ResponseWriter) {
 	if err != nil {

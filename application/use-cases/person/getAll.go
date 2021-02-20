@@ -3,7 +3,6 @@ package usecases
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"persons.com/api/domain/person"
 )
 
@@ -15,14 +14,14 @@ func (p *PersonUseCase) GetAll() ([]*person.Person, error) {
 	if personsInCache == nil {
 		personsCollection, err := p.personService.GetAll()
 		if err != nil {
-			return nil, errors.Wrap(err, "applicacion.personUseCase.GetAll")
+			return nil, err
 		}
 
 		personsFound = personsCollection
 
 		err = p.personCache.SetAll("personsCache@"+time.Now().Format("2-24-2021"), personsCollection)
 		if err != nil {
-			return nil, errors.Wrap(err, "applicacion.personUseCase.GetAll")
+			return nil, err
 		}
 
 	} else {

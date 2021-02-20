@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/cors"
 	"persons.com/api/domain/person"
 	httpHandler "persons.com/api/infrastructure/api/http"
 	"persons.com/api/infrastructure/cache/redis"
@@ -33,8 +34,16 @@ func StartRouter() *chi.Mux {
 	repository := getRepository()
 	service := person.NewPersonService(repository)
 	handler := httpHandler.NewHandler(service, rabbitEventsService, redisCacheService)
-	//app flow: Domain -> Service -> Repository -> Serializers(json, messagePack, grpc, soap, etc) -> Handlers(controllers) -> Transporter(http, websockets, GraphQl etc.)
+
+	cors := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+		AllowedMethods: []string{"GET", "POST"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		MaxAge:         300, // Maximum value not ignored by any of major browsers
+	})
+
 	router := chi.NewRouter()
+	router.Use(cors.Handler)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strconv"
 
-	errorDispatcher "github.com/pkg/errors"
 	"github.com/teris-io/shortid"
 )
 
@@ -31,11 +30,11 @@ func NewPersonService(personRepo PersonRepository) PersonService {
 func (p *personService) Create(person *Person) error {
 
 	if len(person.Name) < NameMinLength {
-		return errorDispatcher.Wrap(ErrInvalidNameLength, "core.Person.Create")
+		return ErrInvalidNameLength
 	}
 
 	if len(person.LastName) < LastNameMinLength {
-		return errorDispatcher.Wrap(ErrInvalidLastNameLength, "core.Person.Create")
+		return ErrInvalidLastNameLength
 	}
 
 	person.ID = shortid.MustGenerate()
@@ -45,7 +44,7 @@ func (p *personService) Create(person *Person) error {
 func (p *personService) FindById(id string) (*Person, error) {
 
 	if len(id) < uniqueIdMinLength {
-		return nil, errorDispatcher.Wrap(ErrInvalidUniqueIdLength, "core.Person.FindById")
+		return nil, ErrInvalidUniqueIdLength
 	}
 
 	return p.personRepo.FindById(id)
